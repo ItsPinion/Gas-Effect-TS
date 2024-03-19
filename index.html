@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      body,
+      html {
+        height: 100%;
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column; /* Stack elements vertically */
+      }
+      canvas {
+        border: 1px solid #000;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="myCanvas" width="300" height="300"></canvas>
+    <input type="range" name="" id="range" value="5">
+
+    <script>
+      let canvas = document.getElementById("myCanvas");
+      let ctx = canvas.getContext("2d");
+      let boxSize = 5; // You can change the size of the boxes here
+      let blocksPerRow = canvas.width / boxSize;
+      let blocksPerCol = canvas.height / boxSize;
+      let colors = [];
+      let on = false;
+      // Initialize color array with white for each block
+      for (let i = 0; i < blocksPerRow * blocksPerCol; i++) {
+        colors.push("#FFFFFF");
+      }
+      document.getElementById("range").addEventListener("change",()=>{
+        boxSize = document.getElementById("range").value
+        console.log(boxSize)
+      })
+      // Function to fill a block with the specified color
+      function fillBlock(blockIndex, color) {
+        let x = (blockIndex % blocksPerRow) * boxSize;
+        let y = Math.floor(blockIndex / blocksPerRow) * boxSize;
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, boxSize, boxSize);
+      }
+
+      // Draw initial blocks in the canvas
+      function drawBlocks() {
+        colors.forEach(function (color, index) {
+          fillBlock(index, color);
+        });
+      }
+      let mouseX;
+      let mouseY;
+
+      // Add click event listener to the canvas for block color change
+      canvas.addEventListener("mousemove", function (event) {
+        let rect = canvas.getBoundingClientRect();
+        mouseX = Math.floor(event.clientX - rect.left);
+        mouseY = Math.floor(event.clientY - rect.top);
+      });
+
+      setInterval(() => {
+        if (
+          mouseX > boxSize &&
+          mouseX < canvas.width - boxSize &&
+          mouseY > boxSize &&
+          mouseY < canvas.height - boxSize &&
+          on
+        ) {
+          // Calculate the block index based on the mouse click
+          let blockIndex =
+            Math.floor(mouseX / boxSize) +
+            Math.floor(mouseY / boxSize) * blocksPerRow;
+
+          // Change the color of the clicked block
+          colors[blockIndex] = "#33186B";
+          fillBlock(blockIndex, colors[blockIndex]);
+        }
+        blurBlocks();
+      }, 1);
+
+      // Blur function
+      function blurBlocks() {
+        let newColors = colors.slice(); // Create a copy of the colors array
+
+        for (let y = 0; y < blocksPerCol; y++) {
+          for (let x = 0; x < blocksPerRow; x++) {
+            let totalRed = 0,
+              totalGreen = 0,
+              totalBlue = 0;
+            let counter = 0;
+            let index;
+
+            // Sum up the color components of surrounding blocks
+            for (let dy = -1; dy <= 1; dy++) {
+              for (let dx = -1; dx <= 1; dx++) {
+                if (
+                  x + dx >= 0 &&
+                  x + dx < blocksPerRow &&
+                  y + dy >= 0 &&
+                  y + dy < blocksPerCol
+                ) {
+                  index = x + dx + (y + dy) * blocksPerRow;
+                  let color = colors[index];
+                  let rgb = parseInt(color.slice(1), 16); // Convert hex to integer
+                  let red = (rgb >> 16) & 0xff;
+                  let green = (rgb >> 8) & 0xff;
+                  let blue = rgb & 0xff;
+
+                  totalRed += red;
+                  totalGreen += green;
+                  totalBlue += blue;
+                  counter++;
+                }
+              }
+            }
+
+            // Calculate the average color of the surrounding blocks
+            let avgRed = Math.round(totalRed / counter);
+            let avgGreen = Math.round(totalGreen / counter);
+            let avgBlue = Math.round(totalBlue / counter);
+            let avgColor =
+              "#" +
+              ((1 << 24) + (avgRed << 16) + (avgGreen << 8) + avgBlue)
+                .toString(16)
+                .slice(1);
+
+            // Set the new color for the block
+            newColors[x + y * blocksPerRow] = avgColor;
+          }
+        }
+
+        // Update the colors array and redraw the blocks
+        colors = newColors;
+        drawBlocks();
+      }
+
+      // Add click event listener to the blur button
+      document.addEventListener("mouseup", () => {
+        on = !on;
+      });
+
+      // Initialize the canvas with blocks
+      drawBlocks();
+    </script>
+  </body>
+</html>
